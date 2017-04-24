@@ -1,95 +1,66 @@
 import numpy as np
-
-def sig(x,deriv=False):
-	if(deriv==True):
-		return x*(1-x)
-	return 1/(1+np.exp(-x))
+import math
 
 def relu(x,deriv=False):
-	x[x < 0] = .01
-	if(deriv==True):
-		x*=.3
-	return x
+	if deriv:
+		return 0.2
+	return np.maximum(0,x)
+
+def sig(x,deriv=False):
+	if deriv:
+		return x*(1-x)
+	return 1/(1 + np.exp(-x))
 
 def f(x,deriv=False):
-	return sig(x,deriv)
-	#return relu(x,deriv)
+	return relu(x,deriv)
+	#return sig(x)
 
-def print_info():
-	print "X", X.shape
-	print np.round(X,3)
-	print
-	print "syn0", syn0.shape
-	print np.round(syn0,1)
-	print
-	print "l1", l1.shape
-	print np.round(l1,1)
-	print
-	print "syn1", syn1.shape
-	print np.round(syn1.T,1)
-	print
-	print "l2", l2.shape
-	print np.round(l2.T,1)
-	print
-	print "l2error"
-	print np.round(l2error.T,3)
-	print
-	print "l2delta"
-	print np.round(l2delta.T,3)
-	print
-	print np.mean(np.abs([l2error])), "mean error in ", iter+1, "iterationss"
+X = np.array([	[0,0],
+				[0,1],
+				[1,0],
+				[1,1]		])
+y = np.array([	[0,1,1,0]	]).T
+l0 = np.copy(X)
+solved = False
 
+def run_network(d = 50):
+	np.random.seed()
+	syn0 = 2*(np.random.random((2,d))-.5)
+	syn1 = 2*(np.random.random((d,1))-.5)
+	bias0 = np.zeros((1,d))
+	bias1 = np.zeros((1,1))
 
-X = np.array([
-	[0,0,1,0],
-	[0,1,1,0],
-	[1,0,1,0],
-	[1,1,1,0]])
+	for iters in xrange(10000):
+		# Forward
+		l1 = f(np.dot(l0,syn0)+bias0)
+		l2 = f(np.dot(l1,syn1)+bias1)
 
-y = np.array([[1],[1],[1],[0]])
-logicgate = 'NAND \n x x'
+		# Back
+		error = y - l2
+		l2_delta = f(l2,True)*error
+		l1_delta = f(l1,True)*np.dot(l2_delta,syn1.T)
+		syn1 += np.dot(l1.T,l2_delta)
+		syn0 += np.dot(l0.T,l1_delta)
+		bias1 += np.array([np.sum(l2_delta, axis=0)])
+		bias0 += np.array([np.sum(l1_delta, axis=0)])
+		mean_err = np.mean(np.abs(error))
+		if mean_err<0.01:
+			print 'solved!   iters:', iters
+			print 'error :\n', error
+			return iters
+	
 
-np.random.seed(1)
-syn0 = 2*np.random.random([4,5])-1
-syn1 = 2*np.random.random([5,1])-1
+run_network()
 
-for iter in range(10000):
-	l0 = X
-	l1 = f(np.dot(l0,syn0)) #+1)
-	l2 = f(np.dot(l1,syn1)) #+1)
-	l2error = y - l2
-	l2delta = l2error*f(l2,deriv=True)
-	l1error = np.dot(l2delta, syn1.T)
-	l1delta = l1error*f(l1,deriv=True)
-	syn1 += np.dot(l1.T,l2delta)
-	syn0 += np.dot(l0.T,l1delta)
+# def forward(l0,syn0,syn1):
+# 	l1 = f(np.dot(l0,syn0) + bias0)
+# 	l2 = f(np.dot(l1,syn1) + bias1)
+# 	return l2
 
-
-	if np.mean(np.abs(l2error)) < .05:
-		print 'y = ', y
-		print 'l2 = ', l2
-		print "l2error = ", l2error
-		print 'y - l2', y - l2
-		break
-
-print_info()
-
-def test(a):
-	an1 = f(np.dot(a,syn0)) #+1)
-	an2 = f(np.dot(an1,syn1)) #+1)
-	return np.round(an2,3)
-
-t = np.array([
-	[0,0,0,1],
-	[1,1,0,1]
-	])
-
-print
-print logicgate
-print X[0], np.round(test(X[0]),0)[0]==1, test(X[0])
-print X[1], np.round(test(X[1]),0)[0]==1, test(X[1])
-print X[2], np.round(test(X[2]),0)[0]==1, test(X[2])
-print X[3], np.round(test(X[3]),0)[0]==1, test(X[3])
-print 'and more...'
-print t[0], np.round(test(t[0]),0)[0]==1, test(t[0])
-print t[1], np.round(test(t[1]),0)[0]==1, test(t[1])
+# for dim in [25,30,35,40,45,50]:
+# 	epochs = []
+# 	for b in range(50):
+# 		output = run_network(dim)
+# 		if output<'':
+# 			epochs.append(output)
+# 	print dim, 'dimensions, ', sum(epochs)/len(epochs), 'iters'
